@@ -7,15 +7,51 @@ namespace Slutprojekt_Programmering_1
     /// <summary>
     /// This is the main type for your game.
     /// </summary>
+    /// 
+
+
+    class Block
+    {
+        Texture2D texture;
+        Rectangle hitbox;
+        // List<Fiende> Fiendelista;
+
+        public Block(Texture2D texture, Vector2 position)
+        {
+            this.texture = texture;
+            hitbox = new Rectangle((int)position.X, (int)position.Y, 100, 100);
+        }
+
+        public Rectangle getHitbox() { return hitbox; }
+
+        public void Update()
+        {
+
+        }
+
+        public void Draw(SpriteBatch spriteBatch)
+        {
+            spriteBatch.Draw(texture, new Vector2(hitbox.X, hitbox.Y), Color.White);
+        }
+    }
+
     public class Game1 : Game
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
-
+        Block[,] blockarray;
+        Texture2D blocktexture;
         public Game1()
         {
+            
+            
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
+            graphics.PreferredBackBufferWidth = 562;  // set this value to the desired width of your window
+            graphics.PreferredBackBufferHeight = 800;   // set this value to the desired height of your window
+            graphics.ApplyChanges();
+            
+
         }
 
         /// <summary>
@@ -39,8 +75,17 @@ namespace Slutprojekt_Programmering_1
         {
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-
+            blocktexture= Content.Load<Texture2D>("block");
             // TODO: use this.Content to load your game content here
+            blockarray = new Block[8, 6];
+            for (int y = 0; y < blockarray.GetLength(1); y++)
+            {
+                for (int x = 0; x < blockarray.GetLength(0); x++)
+                {
+                        Vector2 pos = new Vector2(7 + 69 * x, 30 + 37 * y);
+                        blockarray[x,y] = new Block(blocktexture, pos);
+                }
+            }
         }
 
         /// <summary>
@@ -74,6 +119,14 @@ namespace Slutprojekt_Programmering_1
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
+            Vector2 blockpos = new Vector2(100, 300);
+            spriteBatch.Begin();
+            
+            foreach(Block blk in blockarray)
+            {
+                blk.Draw(spriteBatch);
+            }
+            spriteBatch.End();
 
             // TODO: Add your drawing code here
 
