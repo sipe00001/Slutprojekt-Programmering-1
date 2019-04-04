@@ -14,7 +14,6 @@ namespace Slutprojekt_Programmering_1
     {
         Texture2D texture;
         Rectangle hitbox;
-        // List<Fiende> Fiendelista;
 
         public Block(Texture2D texture, Vector2 position)
         {
@@ -119,7 +118,6 @@ namespace Slutprojekt_Programmering_1
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-            Vector2 blockpos = new Vector2(100, 300);
             spriteBatch.Begin();
             
             foreach(Block blk in blockarray)
