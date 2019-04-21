@@ -5,11 +5,7 @@ using System;
 
 namespace Slutprojekt_Programmering_1
 {
-    /// <summary>
-    /// This is the main type for your game.
-    /// </summary>
-    /// 
-
+    
 
     class Block
     {
@@ -133,6 +129,11 @@ namespace Slutprojekt_Programmering_1
             spriteBatch.Draw(texture, new Vector2(hitbox.X, hitbox.Y) - offset, Color.White);
         }
     }
+
+    /// <summary>
+    /// This is the main type for your game.
+    /// </summary>
+    /// 
 
     public class Game1 : Game
     {
