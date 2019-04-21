@@ -5,8 +5,55 @@ using System;
 
 namespace Slutprojekt_Programmering_1
 {
+
     
 
+    class Ball
+    {
+        Texture2D texture;
+        Circle hitbox;
+        Vector2 velocity;
+        public Ball(Texture2D texture, Vector2 position)
+        {
+            this.texture = texture;
+            hitbox = new Circle(position, 8);
+            velocity = new Vector2(5, -5);
+        }
+
+        public Circle getHitbox() { return hitbox; }
+
+        public void Update(Rectangle paddlehitbox, bool attached)
+        {
+            if (attached) {
+                hitbox.Center.X = (float)Util.Clamp(paddlehitbox.Left, hitbox.Center.X, paddlehitbox.Right);
+                hitbox.Center.Y = paddlehitbox.Y - hitbox.Radius;
+                velocity.X = 0;
+                velocity.Y = 1;
+            }
+            else
+            {
+                if (hitbox.Intersect(paddlehitbox))
+                {
+                    var offsetFromPaddleCenter = hitbox.Center.X - paddlehitbox.Center.X;
+                    var maxRight = 0.8;
+                    var maxLeft = -0.8;
+                    var cos = Util.Clamp(maxLeft, (offsetFromPaddleCenter / paddlehitbox.Width) * 2, maxRight); //normaliserar [-0.5, 0.5] till [-1.0, 1.0]  
+                    var sin = -Math.Sin(Math.Acos(cos));
+                    var vel = new Vector2((float)cos, (float)sin)*5;
+                    velocity = vel;
+                }
+                hitbox.Center += velocity;
+                
+            }
+        }
+
+        public void Draw(SpriteBatch spriteBatch, Vector2 offset, Texture2D point)
+        {
+            Vector2 radiusvec = new Vector2(texture.Width, texture.Height)/2;
+            spriteBatch.Draw(texture, new Vector2(hitbox.Center.X, hitbox.Center.Y) - radiusvec - offset, Color.White);
+            spriteBatch.Draw(point, new Vector2(hitbox.Center.X, hitbox.Center.Y) - offset, Color.White);
+        }
+    }
     class Block
     {
         Texture2D texture;
@@ -88,7 +135,7 @@ namespace Slutprojekt_Programmering_1
     {
         Texture2D texture;
         Rectangle hitbox;
-
+        public bool attached;
         public Paddle(Texture2D texture, Vector2 position)
         {
             this.texture = texture;
@@ -122,6 +169,11 @@ namespace Slutprojekt_Programmering_1
             {
                 hitbox.X = (int)(rightEdgeBorder);
             }
+
+            attached = state.IsKeyDown(Keys.Up);
+            
+
+
         }
 
         public void Draw(SpriteBatch spriteBatch, Vector2 offset)
@@ -141,7 +193,10 @@ namespace Slutprojekt_Programmering_1
         SpriteBatch spriteBatch;
         Block[,] blockarray;
         Texture2D blocktexture;
+        Texture2D circletexture;
+        Texture2D pointtexture;
         Paddle paddle;
+        Ball ball;
         Cam cam;
         public Game1()
         {
@@ -177,7 +232,9 @@ namespace Slutprojekt_Programmering_1
         {
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-            blocktexture= Content.Load<Texture2D>("block");
+            blocktexture = Content.Load<Texture2D>("block");
+            circletexture = Content.Load<Texture2D>("circle");
+            pointtexture= Content.Load<Texture2D>("point");
             // TODO: use this.Content to load your game content here
             blockarray = new Block[8, 6];
             for (int y = 0; y < blockarray.GetLength(1); y++)
@@ -190,6 +247,7 @@ namespace Slutprojekt_Programmering_1
             }
             Vector2 paddlepos = new Vector2(graphics.PreferredBackBufferWidth * 0.5f, graphics.PreferredBackBufferHeight * 0.9f);
             paddle = new Paddle(blocktexture, paddlepos);
+            ball = new Ball(circletexture, new Vector2(paddlepos.X+24, paddlepos.Y-16));
             cam = new Cam(graphics.PreferredBackBufferWidth);
         }
 
@@ -216,6 +274,7 @@ namespace Slutprojekt_Programmering_1
             // TODO: Add your update logic here
             cam.Update(paddle, dt);
             paddle.Update(cam.GetTargetLevelLeftEdge(), cam.GetTransitionTime()>=1.0f, graphics.PreferredBackBufferWidth);
+            ball.Update(paddle.getHitbox(), paddle.attached);
             base.Update(gameTime);
             
         }
@@ -230,7 +289,8 @@ namespace Slutprojekt_Programmering_1
             
             spriteBatch.Begin();
             paddle.Draw(spriteBatch, cam.GetVector());
-            foreach(Block blk in blockarray)
+            ball.Draw(spriteBatch, cam.GetVector(), pointtexture);
+            foreach (Block blk in blockarray)
             {
                 blk.Draw(spriteBatch, cam.GetVector());
             }

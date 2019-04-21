@@ -26,11 +26,8 @@ namespace Slutprojekt_Programmering_1
             var xmax = b.Right;
             var ymin = b.Top;
             var ymax = b.Bottom;
-
-            result.X = Math.Max(xmin, result.X);
-            result.X = Math.Min(xmax, result.X);
-            result.Y = Math.Max(ymin, result.Y);
-            result.Y = Math.Min(ymax, result.Y);
+            result.X = (float)Util.Clamp(xmin, result.X, xmax);
+            result.Y = (float)Util.Clamp(ymin, result.Y, ymax);
 
             return result;
         }
@@ -38,14 +35,14 @@ namespace Slutprojekt_Programmering_1
         {
             Vector2 closePoint = ClosestPoint(this.Center, b);
             var hypotenuse = Math.Sqrt(Math.Pow((closePoint.X - this.Center.X), 2) + Math.Pow((closePoint.Y - this.Center.Y), 2));
-            var difference = this.Radius - hypotenuse;
+            var difference = hypotenuse - this.Radius;
             if (difference < 0)
             {
-                return false;
+                return true;
             }
             else
             {
-                return true;
+                return false;
             }
 
         }
