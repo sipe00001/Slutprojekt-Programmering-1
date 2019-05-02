@@ -19,7 +19,7 @@ namespace Slutprojekt_Programmering_1
         }
         //Real-Time Collision Detection - Christer Ericson
         //Sida 131 point aabb
-        public Vector2 ClosestPoint(Vector2 a, Rectangle b)
+        static public Vector2 ClosestPoint(Vector2 a, Rectangle b)
         {
             Vector2 result = new Vector2(a.X, a.Y);
             var xmin = b.Left;

@@ -5,7 +5,7 @@ using System;
 
 namespace Slutprojekt_Programmering_1
 {
-
+    
     
 
     class Ball
@@ -22,16 +22,20 @@ namespace Slutprojekt_Programmering_1
 
         public Circle getHitbox() { return hitbox; }
 
-        public void Update(Rectangle paddlehitbox, bool attached)
+        public void Update(Game1 gameState, Rectangle paddlehitbox, bool attached, int currentlevel)
         {
+            //Om bollen sitter fast på paddeln.
             if (attached) {
                 hitbox.Center.X = (float)Util.Clamp(paddlehitbox.Left, hitbox.Center.X, paddlehitbox.Right);
                 hitbox.Center.Y = paddlehitbox.Y - hitbox.Radius;
                 velocity.X = 0;
                 velocity.Y = 1;
             }
+            /*** Vanlig bollfysik***/
             else
-            {
+            {              
+                //Hantera kollision med paddeln
+                hitbox.Center += velocity;
                 if (hitbox.Intersect(paddlehitbox))
                 {
                     var offsetFromPaddleCenter = hitbox.Center.X - paddlehitbox.Center.X;
@@ -42,9 +46,59 @@ namespace Slutprojekt_Programmering_1
                     var vel = new Vector2((float)cos, (float)sin)*5;
                     velocity = vel;
                 }
-                hitbox.Center += velocity;
-                
+                //Hantera Kollision med skärmkantena.
+                var screenLeftEdge= currentlevel * Game1.screenWidth;
+                var screenRightEdge = (currentlevel + 1) * Game1.screenWidth;
+                if(hitbox.Center.X-hitbox.Radius <= screenLeftEdge)
+                {
+                    var distancePastLeftEdge = screenLeftEdge - (hitbox.Center.X - hitbox.Radius);
+                    hitbox.Center.X += distancePastLeftEdge;
+                    velocity.X = -velocity.X;
+                }
+                if (hitbox.Center.X + hitbox.Radius >= screenRightEdge)
+                {
+                    var distancePastRightEdge = screenRightEdge - (hitbox.Center.X + hitbox.Radius);
+                    hitbox.Center.X += distancePastRightEdge;
+                    velocity.X = -velocity.X;
+                }
+                //Top koordinat är 0
+                if (hitbox.Center.Y - hitbox.Radius <= 0)
+                {
+                    hitbox.Center.Y = 0 + hitbox.Radius;
+                    velocity.Y = -velocity.Y;
+                }
+                if (hitbox.Center.Y - hitbox.Radius >= Game1.screenHeight)
+                {
+                    hitbox.Center.Y = Game1.screenHeight - hitbox.Radius;
+                    velocity.Y = -velocity.Y;
+                }
+                //Hantera kollision med blocken.
+                bool breakflag = false;
+                for (int y = 0; y < gameState.blockarray.GetLength(1) && !breakflag; y++)
+                {
+                    for (int x = 0; x < gameState.blockarray.GetLength(0) && !breakflag; x++)
+                    {
+                        var blockhitbox = gameState.blockarray[x, y].getHitbox();
+                        var blocktype = gameState.blockarray[x, y].type;
+                        if (blocktype != 0 && this.hitbox.Intersect(blockhitbox))
+                        {
+                            //Kollision
+                            var closePoint = Circle.ClosestPoint(this.hitbox.Center, blockhitbox);
+                            if (blockhitbox.Top == closePoint.Y || blockhitbox.Bottom == closePoint.Y)
+                            {
+                                this.velocity.Y = -this.velocity.Y;
+                            }
+                            else if (blockhitbox.Left == closePoint.X || blockhitbox.Right == closePoint.X)
+                            {
+                                this.velocity.X = -this.velocity.X;
+                            }
+                            gameState.blockarray[x, y].type = 0; //replace with gameState.blockarray[x, y].hit();
+                            breakflag = true;
+                        }
+                    }
+                }
             }
+
         }
 
         public void Draw(SpriteBatch spriteBatch, Vector2 offset, Texture2D point)
@@ -54,15 +108,16 @@ namespace Slutprojekt_Programmering_1
             spriteBatch.Draw(point, new Vector2(hitbox.Center.X, hitbox.Center.Y) - offset, Color.White);
         }
     }
-    class Block
+    public class Block
     {
         Texture2D texture;
         Rectangle hitbox;
-
-        public Block(Texture2D texture, Vector2 position)
+        public int type;
+        public Block(Texture2D texture, Vector2 position, int type)
         {
             this.texture = texture;
-            hitbox = new Rectangle((int)position.X, (int)position.Y, 100, 100);
+            hitbox = new Rectangle((int)position.X, (int)position.Y, texture.Width, texture.Height);
+            this.type = type;
         }
 
         public Rectangle getHitbox() { return hitbox; }
@@ -74,7 +129,9 @@ namespace Slutprojekt_Programmering_1
 
         public void Draw(SpriteBatch spriteBatch, Vector2 offset)
         {
-            spriteBatch.Draw(texture, new Vector2(hitbox.X, hitbox.Y) - offset, Color.White);
+            if(type != 0) { 
+                spriteBatch.Draw(texture, new Vector2(hitbox.X, hitbox.Y) - offset, Color.White);
+            }
         }
     }
 	
@@ -88,16 +145,18 @@ namespace Slutprojekt_Programmering_1
         int level;
         int transit;
         float time;
-        private float screenWidth;
-        public Cam(float scrWidth)
+        public Cam()
         {
-            screenWidth = scrWidth;
+        }
+        public int GetLevel()
+        {
+            return level;
         }
         public Vector2 GetVector() {
 			//Ger tillbaka offset för att rita saker på rätt plats
 			//Utvärderar vilken offset vektor som alla draw-objekten ska använda.
-            Vector2 transitVector = new Vector2(transit * screenWidth, 0);
-            Vector2 levelVector = new Vector2(level * screenWidth, 0);
+            Vector2 transitVector = new Vector2(transit * Game1.screenWidth, 0);
+            Vector2 levelVector = new Vector2(level * Game1.screenWidth, 0);
 
             return Vector2.Lerp(transitVector, levelVector, time);
         }
@@ -107,21 +166,21 @@ namespace Slutprojekt_Programmering_1
         }
         public float GetTargetLevelLeftEdge()
         {
-            return level * screenWidth;
+            return level * Game1.screenWidth;
         }
         public void Update(Paddle paddle, float dt)
         {
             float paddlePos = paddle.getHitbox().Center.X;
-            int nextLevel = (int)(paddlePos / screenWidth); 
+            int nextLevel = (int)(paddlePos / Game1.screenWidth); 
             if (level != nextLevel && time>=1.0f)
             {
                 transit = level;
                 time = 0.0f;
                 level = nextLevel;
+                paddle.attached = true;
             }
             time += dt;
             time = Math.Min(time, 1.0f);
-
 
         }
         
@@ -135,6 +194,7 @@ namespace Slutprojekt_Programmering_1
     {
         Texture2D texture;
         Rectangle hitbox;
+        private bool releaseKeyWasDown;
         public bool attached;
         public Paddle(Texture2D texture, Vector2 position)
         {
@@ -144,7 +204,7 @@ namespace Slutprojekt_Programmering_1
 
         public Rectangle getHitbox() { return hitbox; }
 
-        public void Update(float targetLevelLeftEdge, bool transitionDone, float screenWidth)
+        public void Update(float targetLevelLeftEdge, bool transitionDone)
         {
             //Styrning
             KeyboardState state = Keyboard.GetState();
@@ -164,15 +224,19 @@ namespace Slutprojekt_Programmering_1
             {
                 hitbox.X = (int)leftEdgeBorder;
             }
-            float rightEdgeBorder = targetLevelLeftEdge + screenWidth - paddlewidth / 2 - 1;
+            float rightEdgeBorder = targetLevelLeftEdge + Game1.screenWidth - paddlewidth / 2 - 1;
             if (hitbox.X >= rightEdgeBorder && !allowTransition)
             {
                 hitbox.X = (int)(rightEdgeBorder);
             }
 
-            attached = state.IsKeyDown(Keys.Up);
-            
-
+            if (releaseKeyWasDown == true) {
+                if (state.IsKeyDown(Keys.Up) == false)
+                {
+                    attached = false;
+                }
+            }
+            releaseKeyWasDown = state.IsKeyDown(Keys.Up);
 
         }
 
@@ -189,9 +253,11 @@ namespace Slutprojekt_Programmering_1
 
     public class Game1 : Game
     {
+        public static int screenWidth;
+        public static int screenHeight;
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
-        Block[,] blockarray;
+        public Block[,] blockarray;
         Texture2D blocktexture;
         Texture2D circletexture;
         Texture2D pointtexture;
@@ -207,7 +273,8 @@ namespace Slutprojekt_Programmering_1
             graphics.PreferredBackBufferWidth = 562;  // set this value to the desired width of your window
             graphics.PreferredBackBufferHeight = 800;   // set this value to the desired height of your window
             graphics.ApplyChanges();
-            
+            screenWidth = graphics.PreferredBackBufferWidth;
+            screenHeight = graphics.PreferredBackBufferHeight;
 
         }
 
@@ -241,14 +308,15 @@ namespace Slutprojekt_Programmering_1
             {
                 for (int x = 0; x < blockarray.GetLength(0); x++)
                 {
-                        Vector2 pos = new Vector2(7 + 69 * x, 30 + 37 * y);
-                        blockarray[x,y] = new Block(blocktexture, pos);
+                    int type = 1;
+                    Vector2 pos = new Vector2(7 + 69 * x, 30 + 37 * y);
+                    blockarray[x,y] = new Block(blocktexture, pos, type);
                 }
             }
             Vector2 paddlepos = new Vector2(graphics.PreferredBackBufferWidth * 0.5f, graphics.PreferredBackBufferHeight * 0.9f);
             paddle = new Paddle(blocktexture, paddlepos);
             ball = new Ball(circletexture, new Vector2(paddlepos.X+24, paddlepos.Y-16));
-            cam = new Cam(graphics.PreferredBackBufferWidth);
+            cam = new Cam();
         }
 
         /// <summary>
@@ -273,8 +341,8 @@ namespace Slutprojekt_Programmering_1
 
             // TODO: Add your update logic here
             cam.Update(paddle, dt);
-            paddle.Update(cam.GetTargetLevelLeftEdge(), cam.GetTransitionTime()>=1.0f, graphics.PreferredBackBufferWidth);
-            ball.Update(paddle.getHitbox(), paddle.attached);
+            paddle.Update(cam.GetTargetLevelLeftEdge(), cam.GetTransitionTime()>=1.0f);
+            ball.Update(this, paddle.getHitbox(), paddle.attached, cam.GetLevel());
             base.Update(gameTime);
             
         }
