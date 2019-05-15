@@ -12,5 +12,9 @@ namespace Slutprojekt_Programmering_1
         {
             return Math.Min(Math.Max(val, min), max);
         }
+        public static int Clamp(int min, int val, int max)
+        {
+            return Math.Min(Math.Max(val, min), max);
+        }
     }
 }

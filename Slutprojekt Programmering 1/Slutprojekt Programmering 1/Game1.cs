@@ -2,11 +2,17 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using System.Collections.Generic;
 
 namespace Slutprojekt_Programmering_1
 {
-    
-    
+    //byt namn på dessa.
+    static class Constants
+    {
+        public const int blockCountX = 8;
+        public const int blockCountY = 6;
+    }
+
 
     class Ball
     {
@@ -72,14 +78,15 @@ namespace Slutprojekt_Programmering_1
                     hitbox.Center.Y = Game1.screenHeight - hitbox.Radius;
                     velocity.Y = -velocity.Y;
                 }
-                //Hantera kollision med blocken.
+                //Hantera Kollision med blocken.
                 bool breakflag = false;
-                for (int y = 0; y < gameState.blockarray.GetLength(1) && !breakflag; y++)
+                var currentLevelBlocks = gameState.blockarray[gameState.currentLevel()];
+                for (int y = 0; y < Constants.blockCountY && !breakflag; y++)
                 {
-                    for (int x = 0; x < gameState.blockarray.GetLength(0) && !breakflag; x++)
+                    for (int x = 0; x < Constants.blockCountX && !breakflag; x++)
                     {
-                        var blockhitbox = gameState.blockarray[x, y].getHitbox();
-                        var blocktype = gameState.blockarray[x, y].type;
+                        var blockhitbox = currentLevelBlocks[x, y].getHitbox();
+                        var blocktype = currentLevelBlocks[x, y].type;
                         if (blocktype != 0 && this.hitbox.Intersect(blockhitbox))
                         {
                             //Kollision
@@ -92,7 +99,7 @@ namespace Slutprojekt_Programmering_1
                             {
                                 this.velocity.X = -this.velocity.X;
                             }
-                            gameState.blockarray[x, y].type = 0; //replace with gameState.blockarray[x, y].hit();
+                            currentLevelBlocks[x, y].Hit(); //replace with gameState.blockarray[x, y].hit();
                             breakflag = true;
                         }
                     }
@@ -126,7 +133,17 @@ namespace Slutprojekt_Programmering_1
         {
 
         }
-
+        public void Hit()
+        {
+            //Make an ENUM for all of the various types of block.
+            if (type == 1) {
+                type = 0;
+                Game1.score += 100;
+            } else if (type == 2)
+            {
+                //define type 2
+            }
+        }
         public void Draw(SpriteBatch spriteBatch, Vector2 offset)
         {
             if(type != 0) { 
@@ -151,6 +168,20 @@ namespace Slutprojekt_Programmering_1
         public int GetLevel()
         {
             return level;
+        }
+        //returns a list of level indicies to draw.
+        public int[] GetView()
+        {
+            int[] views= new int[2];
+            views[0] = level;
+            if (level != transit) {
+                views[1] = transit;
+            }
+            else
+            {
+                views[1] = -1; //ignoreras av draw() funktionen
+            }
+            return views;
         }
         public Vector2 GetVector() {
 			//Ger tillbaka offset för att rita saker på rätt plats
@@ -250,14 +281,15 @@ namespace Slutprojekt_Programmering_1
     /// This is the main type for your game.
     /// </summary>
     /// 
-
+    
     public class Game1 : Game
     {
+        public static int score;
         public static int screenWidth;
         public static int screenHeight;
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
-        public Block[,] blockarray;
+        public List<Block[, ]>  blockarray;
         Texture2D blocktexture;
         Texture2D circletexture;
         Texture2D pointtexture;
@@ -291,6 +323,57 @@ namespace Slutprojekt_Programmering_1
             base.Initialize();
         }
 
+        public void blockFill(Block[,] array, int index)
+        {
+            for (int y = 0; y < Constants.blockCountY; y++)
+            {
+                for (int x = 0; x < Constants.blockCountX; x++)
+                {
+                    int type = 1;
+                    int levelOffset = index * screenWidth;
+                    int paddingX = 7;
+                    int paddingY = 30;
+                    int spacingX = 69;
+                    int spacingY = 37;
+                    int xCoordinate = levelOffset + paddingX + spacingX * x; 
+                    int yCoordinate = paddingY + spacingY * y;
+                    Vector2 pos = new Vector2(xCoordinate, yCoordinate);
+                    blockarray[index][x, y] = new Block(blocktexture, pos, type);
+                }
+            }
+        }
+        public void blockRandom(Block[,] array, int index)
+        {
+            Random rng = new Random(index); //seed with index. This creates deterministic generation. Have an actual random seed for a run.
+            for (int y = 0; y < Constants.blockCountY; y++)
+            {
+                for (int x = 0; x < Constants.blockCountX; x++)
+                {
+
+                    int type = rng.Next(2); //max 1
+                    int levelOffset = index * screenWidth;
+                    int paddingX = 7;
+                    int paddingY = 30;
+                    int spacingX = 69;
+                    int spacingY = 37;
+                    int xCoordinate = levelOffset + paddingX + spacingX * x;
+                    int yCoordinate = paddingY + spacingY * y;
+                    Vector2 pos = new Vector2(xCoordinate, yCoordinate);
+                    blockarray[index][x, y] = new Block(blocktexture, pos, type);
+                }
+            }
+        }
+        public void generateNextLevel()
+        {
+            int index = blockarray.Count; //0 first time
+            blockarray.Add(new Block[Constants.blockCountX, Constants.blockCountY]);
+            blockRandom(blockarray[index], index);
+        }
+        public int currentLevel()
+        {
+            return cam.GetLevel();
+        }
+
         /// <summary>
         /// LoadContent will be called once per game and is the place to load
         /// all of your content.
@@ -303,16 +386,9 @@ namespace Slutprojekt_Programmering_1
             circletexture = Content.Load<Texture2D>("circle");
             pointtexture= Content.Load<Texture2D>("point");
             // TODO: use this.Content to load your game content here
-            blockarray = new Block[8, 6];
-            for (int y = 0; y < blockarray.GetLength(1); y++)
-            {
-                for (int x = 0; x < blockarray.GetLength(0); x++)
-                {
-                    int type = 1;
-                    Vector2 pos = new Vector2(7 + 69 * x, 30 + 37 * y);
-                    blockarray[x,y] = new Block(blocktexture, pos, type);
-                }
-            }
+            blockarray = new List<Block[,]>();
+            //create the first level
+            generateNextLevel();
             Vector2 paddlepos = new Vector2(graphics.PreferredBackBufferWidth * 0.5f, graphics.PreferredBackBufferHeight * 0.9f);
             paddle = new Paddle(blocktexture, paddlepos);
             ball = new Ball(circletexture, new Vector2(paddlepos.X+24, paddlepos.Y-16));
@@ -339,6 +415,13 @@ namespace Slutprojekt_Programmering_1
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            //Generate levels as we go:
+            //If the next level is not generated yet we generate it
+            if (cam.GetLevel() + 1 >= blockarray.Count)
+            {
+                generateNextLevel();
+            }
+
             // TODO: Add your update logic here
             cam.Update(paddle, dt);
             paddle.Update(cam.GetTargetLevelLeftEdge(), cam.GetTransitionTime()>=1.0f);
@@ -353,18 +436,24 @@ namespace Slutprojekt_Programmering_1
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-           GraphicsDevice.Clear(Color.CornflowerBlue);
+            // TODO: Add your drawing code here
+            GraphicsDevice.Clear(Color.CornflowerBlue);
             
             spriteBatch.Begin();
             paddle.Draw(spriteBatch, cam.GetVector());
             ball.Draw(spriteBatch, cam.GetVector(), pointtexture);
-            foreach (Block blk in blockarray)
-            {
-                blk.Draw(spriteBatch, cam.GetVector());
+
+            //Draw all potentially visible blocks (at level granularity).
+            int[] view = cam.GetView();
+            foreach(int level in view) { 
+                if (level != -1){ 
+                    foreach (Block blk in blockarray[level])
+                    {
+                        blk.Draw(spriteBatch, cam.GetVector());
+                    }
+                }
             }
             spriteBatch.End();
-
-            // TODO: Add your drawing code here
 
             base.Draw(gameTime);
         }
