@@ -100,7 +100,7 @@ namespace Slutprojekt_Programmering_1
         }
         public static void LoadScore()
         {
-            string text = System.IO.File.ReadAllText(@".\score.txt");
+            string text = System.IO.File.ReadAllText(@"..\..\..\..\score.txt");
             foreach(var line in text.Split('\n'))
             {
                 if (line == "")
@@ -135,7 +135,7 @@ namespace Slutprojekt_Programmering_1
             {
                 text += scorelistNames[i] + ':' + scorelistScores[i] + '\n';
             }
-            System.IO.File.WriteAllText(@".\score.txt", text);
+            System.IO.File.WriteAllText(@"..\..\..\..\score.txt", text);
         }
 
 
