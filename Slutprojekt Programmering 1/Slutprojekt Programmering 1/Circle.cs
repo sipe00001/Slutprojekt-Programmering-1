@@ -19,6 +19,9 @@ namespace Slutprojekt_Programmering_1
         }
         //Real-Time Collision Detection - Christer Ericson
         //Sida 131 point aabb
+        /// <summary>
+        /// Hittar närmaste punkten på en rektangel till en punkt
+        /// </summary>
         static public Vector2 ClosestPoint(Vector2 a, Rectangle b)
         {
             Vector2 result = new Vector2(a.X, a.Y);
@@ -31,6 +34,9 @@ namespace Slutprojekt_Programmering_1
 
             return result;
         }
+        /// <summary>
+        /// Säger ifall en rektangel och en punkt kolliderar.
+        /// </summary>
         public bool Intersect(Rectangle b)
         {
             Vector2 closePoint = ClosestPoint(this.Center, b);
